@@ -145,6 +145,12 @@ public class Game : GameWindow
 
         // TODO (T3): la clic stânga, obiectul selectat se mută în punctul din lume aflat sub cursor
         //            (folosiți ScreenToWorld; Depth nu se schimbă)
+        if (MouseState.IsButtonPressed(MouseButton.Left))
+        {
+            Vector2 targetWorldPosition = ScreenToWorld(MouseState.Position);
+            sel.Transform.Position = targetWorldPosition;
+            
+        }
 
         // TODO (T4, facultativ): clic dreapta = pivot; tasta P ținută = rotație în jurul pivotului
 
@@ -225,8 +231,33 @@ public class Game : GameWindow
     /// <summary>Transformă poziția mouse-ului (pixeli, origine stânga-sus) în coordonate de lume.</summary>
     private Vector2 ScreenToWorld(Vector2 mousePixels)
     {
-        // TODO (T3): pasul 1 (pixel → NDC), apoi pasul 2 (NDC → lume, cu inversa lui view * projection)
-        return Vector2.Zero;
+        // Comentariu cerut: Semnul minus (forma 1 - ...) apare la calculul pentru axa y deoarece 
+        // sistemul de coordonate al ferestrei (mouse-ului) are originea în stânga-sus, cu y crescând 
+        // în jos. În contrast, sistemul NDC (Normalized Device Coordinates) din OpenGL are 
+        // originea în centru, iar axa y crește în sus. Inversarea axei previne mișcarea 
+        // "în oglindă" pe verticală.
+
+        // Pasul 1: pixel → NDC (intervalul [-1, 1])
+        float ndcX = (2.0f * mousePixels.X) / ClientSize.X - 1.0f;
+        float ndcY = 1.0f - (2.0f * mousePixels.Y) / ClientSize.Y;
+        Vector4 ndcPos = new Vector4(ndcX, ndcY, 0.0f, 1.0f);
+
+        // Pasul 2: NDC → lume, cu inversa lui view * projection
+        // Ordinea înmulțirii matricilor în OpenTK este View * Projection
+        Matrix4 viewProj = _camera.ViewMatrix * _camera.ProjectionMatrix;
+        Matrix4 inverseViewProj = Matrix4.Invert(viewProj);
+
+        // Înmulțim vectorul cu matricea inversă (în OpenTK vectorul stă la stânga: vector * matrice)
+        Vector4 worldPos = ndcPos * inverseViewProj;
+
+        // Perspectiva divide (împărțirea la coordonata omogenă w)
+        if (worldPos.W != 0.0f)
+        {
+            worldPos.X /= worldPos.W;
+            worldPos.Y /= worldPos.W;
+        }
+
+        return new Vector2(worldPos.X, worldPos.Y);
     }
 
     /// <summary>Tasta R: obiectele revin la transformările inițiale, camera la starea inițială.</summary>
