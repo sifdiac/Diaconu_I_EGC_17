@@ -103,23 +103,42 @@ public class Game : GameWindow
         float dt = (float)args.Time;
         SceneObject sel = _scene[_selected];
 
-        const float moveSpeed = 2.0f;   // unități de lume pe secundă
-        if (KeyboardState.IsKeyDown(Keys.Left))  sel.Transform.Position.X -= moveSpeed * dt;
+        // Shift ținut apăsat: toate cele 3 mișcări de 3 ori mai rapide
+        float speedMultiplier = KeyboardState.IsKeyDown(Keys.LeftShift) ? 3.0f : 1.0f;
+
+        float moveSpeed = 2.0f * speedMultiplier;   // unități de lume pe secundă
+        if (KeyboardState.IsKeyDown(Keys.Left)) sel.Transform.Position.X -= moveSpeed * dt;
         if (KeyboardState.IsKeyDown(Keys.Right)) sel.Transform.Position.X += moveSpeed * dt;
-        if (KeyboardState.IsKeyDown(Keys.Down))  sel.Transform.Position.Y -= moveSpeed * dt;
-        if (KeyboardState.IsKeyDown(Keys.Up))    sel.Transform.Position.Y += moveSpeed * dt;
+        if (KeyboardState.IsKeyDown(Keys.Down)) sel.Transform.Position.Y -= moveSpeed * dt;
+        if (KeyboardState.IsKeyDown(Keys.Up)) sel.Transform.Position.Y += moveSpeed * dt;
 
         // TODO (T2): Q / E rotesc obiectul, Z / X îl scalează
 
-        if (KeyboardState.IsKeyPressed(Keys.Tab)) _selected = (_selected + 1) % _scene.Count;
-        if (KeyboardState.IsKeyPressed(Keys.O))   _camera.IsPerspective = !_camera.IsPerspective;
-        if (KeyboardState.IsKeyPressed(Keys.F))   _wireframe = !_wireframe;
-        if (KeyboardState.IsKeyPressed(Keys.R))   ResetScene();
+        // Rotația
+        float rotationSpeed = 90.0f * speedMultiplier;
+        if (KeyboardState.IsKeyDown(Keys.Q)) sel.Transform.Rotation += rotationSpeed * dt;
+        if (KeyboardState.IsKeyDown(Keys.E)) sel.Transform.Rotation -= rotationSpeed * dt;
 
-        if (KeyboardState.IsKeyPressed(Keys.Tab) || KeyboardState.IsKeyPressed(Keys.O) ||
-            KeyboardState.IsKeyPressed(Keys.R))
+        // Comentariu cerut: Scalarea se face prin înmulțire (ca factor proporțional) 
+        // și nu prin adunare deoarece vrem ca obiectul să crească sau să scadă constant 
+        // relativ la dimensiunea lui curentă. Dacă am folosi adunarea (ex: +0.1), un 
+        // obiect deja foarte mare ar părea că nu se modifică vizual mai deloc, în timp 
+        // ce unul foarte mic s-ar dubla instantaneu.
+
+        // Scalarea
+        float scaleDirection = 0.0f;
+        if (KeyboardState.IsKeyDown(Keys.Z)) scaleDirection -= 1.0f; // micșorare
+        if (KeyboardState.IsKeyDown(Keys.X)) scaleDirection += 1.0f; // mărire
+
+        if (scaleDirection != 0.0f)
         {
-            _titleDirty = true;
+            // Aplicăm MathF.Pow cu factorul de 1.5 ajustat de timp, sens și tasta Shift
+            float scaleFactor = MathF.Pow(1.5f, scaleDirection * speedMultiplier * dt);
+            sel.Transform.Scale *= scaleFactor;
+
+            // Limităm scara între 0.1 și 10 pe ambele axe
+            sel.Transform.Scale.X = Math.Clamp(sel.Transform.Scale.X, 0.1f, 10.0f);
+            sel.Transform.Scale.Y = Math.Clamp(sel.Transform.Scale.Y, 0.1f, 10.0f);
         }
 
         // --- Obiectul selectat: mouse-ul (secțiunea 9) -------------------------------
