@@ -13,8 +13,14 @@ public class Transform2D
     public Vector2 Scale = Vector2.One;       // factorii de scalare pe x și pe y
     public float Depth = 0.0f;                // coordonata z; contează doar în perspectivă (secțiunea 7.2)
 
+    // Comentariu cerut: Dacă translația ar fi aplicată înaintea rotației, 
+    // obiectul ar fi mai întâi mutat de la origine, iar apoi rotația s-ar face 
+    // în jurul originii sistemului de coordonate global (0,0), nu în jurul centrului 
+    // propriu al obiectului. Vizual, obiectul ar "orbita" în jurul originii pe o rază 
+    // egală cu distanța translației, în loc să se rotească pe loc.
     public Matrix4 ModelMatrix =>
-        // TODO (T1): scalare, apoi rotație, apoi translație
+        Matrix4.CreateScale(Scale.X, Scale.Y, 1.0f) *
+        Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(Rotation)) *
         Matrix4.CreateTranslation(Position.X, Position.Y, Depth);
 
     /// <summary>O copie independentă (folosită pentru readucerea scenei în starea inițială).</summary>
