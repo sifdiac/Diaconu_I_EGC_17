@@ -24,6 +24,7 @@ public class Game : GameWindow
     // Starea aplicației (se modifică în OnUpdateFrame, se folosește în OnRenderFrame).
     private int _selected;            // indexul obiectului selectat în _scene (tasta Tab)
     private bool _wireframe;          // contur (true) sau plin (false)
+    private Vector2? _pivot = null;
 
     // Contoare afișate în titlul ferestrei.
     private readonly string _baseTitle;
@@ -153,7 +154,35 @@ public class Game : GameWindow
         }
 
         // TODO (T4, facultativ): clic dreapta = pivot; tasta P ținută = rotație în jurul pivotului
+        
 
+        
+        if (MouseState.IsButtonPressed(MouseButton.Right))
+        {
+            _pivot = ScreenToWorld(MouseState.Position);
+        }
+
+        
+        if (_pivot.HasValue && KeyboardState.IsKeyDown(Keys.P))
+        {
+            float orbitSpeedDegrees = 90.0f;               // 90° pe secundă
+            float angleDegrees = orbitSpeedDegrees * dt;   // unghiul pentru cadrul curent
+            float angleRadians = MathHelper.DegreesToRadians(angleDegrees);
+
+            
+            Vector2 offset = sel.Transform.Position - _pivot.Value;
+
+            
+            float cos = MathF.Cos(angleRadians);
+            float sin = MathF.Sin(angleRadians);
+            float newX = offset.X * cos - offset.Y * sin;
+            float newY = offset.X * sin + offset.Y * cos;
+
+            
+            sel.Transform.Position = new Vector2(newX, newY) + _pivot.Value;
+
+            sel.Transform.Rotation += angleDegrees;
+        }
         // --- Camera: tastatura și rotița (secțiunea 6.2) -----------------------------
 
         float camSpeed = 3.0f / _camera.Zoom;                    // unități de lume pe secundă
