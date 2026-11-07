@@ -24,7 +24,7 @@ public class Game : GameWindow
     // Starea aplicației (se modifică în OnUpdateFrame, se folosește în OnRenderFrame).
     private int _selected;            // indexul obiectului selectat în _scene (tasta Tab)
     private bool _wireframe;          // contur (true) sau plin (false)
-    private Vector2? _pivot = null;
+    private Vector2? _pivot = null;   // pentru rotația obiectului în jurul unui punct (T4)
 
     // Contoare afișate în titlul ferestrei.
     private readonly string _baseTitle;
@@ -65,8 +65,7 @@ public class Game : GameWindow
         AddObject("pătrat", Shapes.Quad(),
                   new Transform2D { Position = new Vector2(-1.8f, -1.0f), Depth = -3.0f });
         AddObject("triunghi", Shapes.Triangle(),
-                 //test T1 new Transform2D { Position = new Vector2(-1.2f, 1.0f),Rotation = 45f, Scale=new Vector2(1.5f,0.5f) });
-                 new Transform2D { Position = new Vector2(-1.2f, 1.0f) });
+                  new Transform2D { Position = new Vector2(-1.2f, 1.0f) });
         AddObject("hexagon", Shapes.RegularPolygon(6, 0.5f),
                   new Transform2D { Position = new Vector2(2.0f, 1.0f) });
         AddObject("cerc", Shapes.RegularPolygon(64, 0.5f),
@@ -142,6 +141,18 @@ public class Game : GameWindow
             sel.Transform.Scale.Y = Math.Clamp(sel.Transform.Scale.Y, 0.1f, 10.0f);
         }
 
+        // TASTELE RESTAURATE PENTRU SELECTARE ȘI VIZUALIZARE
+        if (KeyboardState.IsKeyPressed(Keys.Tab)) _selected = (_selected + 1) % _scene.Count;
+        if (KeyboardState.IsKeyPressed(Keys.O)) _camera.IsPerspective = !_camera.IsPerspective;
+        if (KeyboardState.IsKeyPressed(Keys.F)) _wireframe = !_wireframe;
+        if (KeyboardState.IsKeyPressed(Keys.R)) ResetScene();
+
+        if (KeyboardState.IsKeyPressed(Keys.Tab) || KeyboardState.IsKeyPressed(Keys.O) ||
+            KeyboardState.IsKeyPressed(Keys.R))
+        {
+            _titleDirty = true;
+        }
+
         // --- Obiectul selectat: mouse-ul (secțiunea 9) -------------------------------
 
         // TODO (T3): la clic stânga, obiectul selectat se mută în punctul din lume aflat sub cursor
@@ -150,39 +161,36 @@ public class Game : GameWindow
         {
             Vector2 targetWorldPosition = ScreenToWorld(MouseState.Position);
             sel.Transform.Position = targetWorldPosition;
-            
         }
 
         // TODO (T4, facultativ): clic dreapta = pivot; tasta P ținută = rotație în jurul pivotului
-        
-
-        
         if (MouseState.IsButtonPressed(MouseButton.Right))
         {
             _pivot = ScreenToWorld(MouseState.Position);
         }
 
-        
         if (_pivot.HasValue && KeyboardState.IsKeyDown(Keys.P))
         {
             float orbitSpeedDegrees = 90.0f;               // 90° pe secundă
             float angleDegrees = orbitSpeedDegrees * dt;   // unghiul pentru cadrul curent
             float angleRadians = MathHelper.DegreesToRadians(angleDegrees);
 
-            
+            // Aflăm poziția obiectului relativă la pivot (aducem pivotul imaginar în origine)
             Vector2 offset = sel.Transform.Position - _pivot.Value;
 
-            
+            // Rotim vectorul folosind formulele trigonometrice standard 2D
             float cos = MathF.Cos(angleRadians);
             float sin = MathF.Sin(angleRadians);
             float newX = offset.X * cos - offset.Y * sin;
             float newY = offset.X * sin + offset.Y * cos;
 
-            
+            // Mutăm înapoi obiectul la distanța rotită față de pivotul real
             sel.Transform.Position = new Vector2(newX, newY) + _pivot.Value;
 
+            // Adunăm același unghi la rotația proprie, simulând rotația sincronă (ex: Luna și Pământul)
             sel.Transform.Rotation += angleDegrees;
         }
+
         // --- Camera: tastatura și rotița (secțiunea 6.2) -----------------------------
 
         float camSpeed = 3.0f / _camera.Zoom;                    // unități de lume pe secundă
